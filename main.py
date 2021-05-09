@@ -21,8 +21,7 @@ LOST_MSG_SPACING = 100
 LOST_PAUSE_TIME = 3
 
 INIT_LIVES = 3
-INIT_AMT_PER_WAV = 5
-WAV_INCRMT = 5
+WAV_INCRMT = 1
 
 NRML_SIZE = 40
 NORMAL_VIRUS = pg.transform.scale(pg.image.load(os.path.join("assets", 
@@ -91,7 +90,7 @@ class Virus(object):
 
     def move(self):
         self.y += self.speed
-        x_move = get_random((-1, 1))
+        x_move = random.randrange(-50, 50)
         if x_move > 0 and \
            self.x + self.speed + self.img.get_width() < SCREEN_WIDTH:
             self.x += self.speed
@@ -149,7 +148,7 @@ def game(win):
     
     level = 0
     lives_remaining = INIT_LIVES
-    amount_per_wave = INIT_AMT_PER_WAV
+    amount_per_wave = 0
 
     lost = False
     lost_count = 0
