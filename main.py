@@ -15,6 +15,7 @@ START_MENU_TEXT_SPACING = 150
 GAME_FONT = "comicsans"
 FONT_SIZE = 40
 FONT_COLOR = (255, 255, 255)
+LVL_POS = (10, 10)
 
 LOST_MSG_Y = 400
 LOST_MSG_SPACING = 100
@@ -246,8 +247,14 @@ def draw_lost(win, font):
     win.blit(lost_msg, (SCREEN_WIDTH / 2 - lost_msg.get_width() / 2,
                         LOST_MSG_Y + LOST_MSG_SPACING * 2))
 
-def draw_game(win, font, viruses, vac, lost):
+def draw_game(win, font, viruses, vac, lost, lives, level):
     win.fill((0, 0, 0)) # add game backgrounf later
+
+    lives_label = font.render(f"Lives: {lives}", 1, FONT_COLOR)
+    level_label = font.render(f"Level: {level}", 1, FONT_COLOR)
+
+    win.blit(lives_label, (SCREEN_WIDTH - lives_label.get_width() - 10, 10))
+    win.blit(level_label, LVL_POS)
 
     for virus in viruses:
         virus.draw(win)
@@ -279,7 +286,7 @@ def game(win):
     while run:
         #play_time = round(time.time() - start_time)
 
-        draw_game(win, font, viruses, vac, lost)
+        draw_game(win, font, viruses, vac, lost, lives_remaining, level)
 
         if lives_remaining <= 0 or vac.health <= 0:
             lost = True
@@ -288,6 +295,12 @@ def game(win):
             if lost_count > FRAME_RATES * LOST_PAUSE_TIME:
                 run = False
             else:
+                for event in pg.event.get():
+                    if event.type == pg.QUIT:
+                        pg.quit()
+                    if event.type == pg.KEYDOWN or \
+                       event.type == pg.MOUSEBUTTONDOWN:
+                        return
                 continue
 
         if len(viruses) == 0:
@@ -316,7 +329,8 @@ def game(win):
         if (keys[pg.K_w] or keys[pg.K_UP]) and vac.y - vac.speed >= 0:
             vac.y -= vac.speed
         if (keys[pg.K_s] or keys[pg.K_DOWN]) and \
-            vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
+            vac.y + vac.speed + vac.get_height() + \
+            HEALTH_BAR_HEIGHT + HEALTH_BAR_SHIFT <= SCREEN_HEIGHT:
             vac.y += vac.speed
         if keys[pg.K_SPACE]:
             vac.shoot()
