@@ -10,9 +10,10 @@ FRAME_RATES = 60
 
 GAME_FONT = "comicsans"
 FONT_SIZE = 40
-LOST_FONT = 50
 FONT_COLOR = (255, 255, 255)
 START_MENU_TEXT_SPACING = 150
+LOST_MSG_Y = 400
+LOST_MSG_SPACING = 100
 INIT_LIVES = 3
 
 NORMAL_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
@@ -109,6 +110,30 @@ def draw_start_menu(win, font):
 
     pg.display.update()
 
+def draw_lost(win, font):
+    lost_msg = font.render("YOU LOST!", 1, FONT_COLOR)
+    win.blit(lost_msg, (SCREEN_WIDTH / 2 - lost_msg.get_width() / 2,
+                        LOST_MSG_Y))
+    lost_msg = font.render("Please wear your mask", 1, FONT_COLOR)
+    win.blit(lost_msg, (SCREEN_WIDTH / 2 - lost_msg.get_width() / 2,
+                        LOST_MSG_Y + LOST_MSG_SPACING))
+    lost_msg = font.render("and practice social distancing!", 1, FONT_COLOR)
+    win.blit(lost_msg, (SCREEN_WIDTH / 2 - lost_msg.get_width() / 2,
+                        LOST_MSG_Y + LOST_MSG_SPACING * 2))
+
+def draw_game(win, font, viruses, vac, lost):
+    win.fill((0, 0, 0)) # add game backgrounf later
+
+    for virus in viruses:
+        virus.draw(win)
+
+    vac.draw(win)
+
+    if lost:
+        draw_lost(win, font)
+
+    pg.display.update()
+
 def main():
     pg.init()
     win = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -140,11 +165,16 @@ def main():
 
         level = 0
         lives_remaining = INIT_LIVES
+        lost = False
+        lost_count = 0
         vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
         viruses = []
         amount_per_wave = INIT_AMT_PER_WAV
         start_time = time.time()
         while game:
+
+            if lives_remaining <= 0 or vac.health <= 0:
+                lost = True
 
             if len(viruses) == 0:
                 level += 1
@@ -156,15 +186,6 @@ def main():
                                        VIRUS_SPEED_GAP,
                                   random.choice(VARIANT_LIST))
                     viruses.append(virus)
-
-            def draw_game():
-                win.fill((0, 0, 0)) # add game backgrounf later
-
-                for virus in viruses:
-                    virus.draw(win)
-
-                vac.draw(win)
-                pg.display.update()
 
             play_time = round(time.time() - start_time)
 
@@ -186,7 +207,7 @@ def main():
                 vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
                 vac.y += vac.speed
 
-            draw_game()
+            draw_game(win, font, viruses, vac, lost)
 
     pg.quit()
 
