@@ -14,6 +14,7 @@ FONT_COLOR = (255, 255, 255)
 START_MENU_TEXT_SPACING = 150
 LOST_MSG_Y = 400
 LOST_MSG_SPACING = 100
+LOST_PAUSE_TIME = 3
 INIT_LIVES = 3
 
 NORMAL_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
@@ -175,6 +176,12 @@ def main():
 
             if lives_remaining <= 0 or vac.health <= 0:
                 lost = True
+
+            if lost:
+                if lost_count > FPS * LOST_PAUSE_TIME:
+                    run = False
+                else:
+                    continue
 
             if len(viruses) == 0:
                 level += 1
