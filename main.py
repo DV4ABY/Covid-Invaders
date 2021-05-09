@@ -21,82 +21,199 @@ LOST_MSG_SPACING = 100
 LOST_PAUSE_TIME = 3
 
 INIT_LIVES = 3
-WAV_INCRMT = 1
+WAV_INCRMT = 5
+DOUBLE_HEALTH_WAVE = 10
 
 NRML_SIZE = 40
+VIR_BU_SIZE = 40
+VIR_BU_VEL = 0.3
+VIR_BU_PROB = FRAME_RATES * 4
+VIR_BU_CD = FRAME_RATES * 20
 NORMAL_VIRUS = pg.transform.scale(pg.image.load(os.path.join("assets", 
-                                                             "red virus.jpg")),
+                                                             "red virus.png")),
                                   (NRML_SIZE, NRML_SIZE))
-VIRUS_ATTK = pg.image.load(os.path.join("assets", "infect.png"))
+INDIA_VIRUS = pg.transform.scale(pg.image.load(os.path.join("assets", 
+                                                             "blue virus.png")),
+                                 (NRML_SIZE, NRML_SIZE))
+VIRUS_ATTK = pg.transform.scale(pg.image.load(os.path.join("assets", 
+                                                           "infect.png")),
+                                (VIR_BU_SIZE, VIR_BU_SIZE))
+
 VARIANT_MAP = {
-    "normal": (NORMAL_VIRUS, VIRUS_ATTK)
+    "normal": (NORMAL_VIRUS, VIRUS_ATTK),
+    "india": (INDIA_VIRUS, VIRUS_ATTK)
 }
+
 VIRUS_INIT_HEALTH = 1
+VIRUS_DAMAGE = 15
 VIRUS_SPAWN_RANGE_X = (50, SCREEN_WIDTH - 50)
-VIRUS_SPAWN_RANGE_Y = (-1800, -50)
-VIRUS_SPEED_GAP = 50
-VIRUS_SPEED_RANGE = (10, 30)
+VIRUS_SPAWN_RANGE_Y = (-800, -50)
+VIRUS_SPEED_GAP = 100
+VIRUS_SPEED_RANGE = (10, 20)
 
 VAC_SIZE = 40
+VAC_BU_SIZE = 25
+VAC_BU_VEL = -3
 VACCINE = pg.transform.scale(pg.image.load(os.path.join("assets",
                              "vaccine.png")), (VAC_SIZE, VAC_SIZE))
-VAC_ATTK = pg.image.load(os.path.join("assets", "medicine.png"))
+VAC_ATTK = pg.transform.scale(pg.image.load(os.path.join("assets", 
+                                                         "medicine.png")),
+                              (VAC_BU_SIZE, VAC_BU_SIZE))
 VAC_INIT_Y = 900
 VAC_INIT_SPEED = 1
 VAC_INIT_HEALTH = 100
 
-class Vaccine(object):
+HEALTH_BAR_SHIFT = 10
+HEALTH_BAR_HEIGHT = 5
 
-    def __init__(self, x, y, speed = VAC_INIT_SPEED, effect = 1,
-                 health = VAC_INIT_HEALTH, damage = VIRUS_INIT_HEALTH):
+class Entity(object):
+    CD = FRAME_RATES // 2
+    
+    def __init__(self, x, y, speed, health, damage):
         self.x = x
         self.y = y
         self.speed = speed
-        self.effect = effect
         self.health = health
         self.max_health = health
         self.damage = damage
-        self.img = VACCINE
-        self.med_img = VAC_ATTK
-        self.med = []
+        self.img = None
+        self.attk_img = None
+        self.attks = []
         self.cd = 0
-        self.mask = pg.mask.from_surface(VACCINE)
 
     def draw(self, win):
-        win.blit(VACCINE, (self.x, self.y))
+        win.blit(self.img, (self.x, self.y))
+        for attk in self.attks:
+            attk.draw(win)
+
+    def move_bullet(self, vel, obj):
+        self.cooldown()
+        for attk in self.attks:
+            attk.move(vel)
+            if attk.off_screen(SCREEN_HEIGHT):
+                self.attks.remove(attk)
+            elif attk.collision(obj):
+                obj.health -= self.damage
+                self.attks.remove(attk)
 
     def get_width(self):
         return self.img.get_width()
 
     def get_height(self):
         return self.img.get_height()
-        
 
-class Virus(object):
+    def cooldown(self):
+        if self.cd >= self.CD:
+            self.cd = 0
+        elif self.cd > 0:
+            self.cd += 1
 
-    def __init__(self, x, y, speed, variant, health = VIRUS_INIT_HEALTH):
-        self.x = x
-        self.y = y
-        self.speed = speed
-        self.variant = variant
-        self.img, self.infect_img = VARIANT_MAP[variant]
+    def shoot(self):
+        if self.cd == 0:
+            bullet = Bullet(self.x + self.get_width() / 2 - \
+                            self.attk_img.get_width() / 2, 
+                            self.y, self.attk_img)
+            self.attks.append(bullet)
+            self.cd = 1
+
+    def draw_health_bar(self, win):
+        pg.draw.rect(win, (255, 0, 0), 
+                     (self.x, self.y + self.get_height() + HEALTH_BAR_SHIFT,
+                      self.get_width(), HEALTH_BAR_HEIGHT))
+        pg.draw.rect(win, (0, 255, 0), 
+                     (self.x, self.y + self.get_height() + HEALTH_BAR_SHIFT,
+                      self.get_width() * (self.health / self.max_health), 
+                      HEALTH_BAR_HEIGHT))
+
+
+class Vaccine(Entity):
+
+    def __init__(self, x, y, speed = VAC_INIT_SPEED, effect = 1,
+                 health = VAC_INIT_HEALTH, damage = VIRUS_INIT_HEALTH):
+        super().__init__(x, y, speed, health, damage)
+        self.effect = effect
+        self.damage = damage
+        self.img = VACCINE
+        self.attk_img = VAC_ATTK
         self.mask = pg.mask.from_surface(self.img)
-        self.health = health
-        self.max_health = health
-        self.infects = []
+
+    def move_bullet(self, vel, objs):
+        self.cooldown()
+        for attk in self.attks:
+            attk.move(vel)
+            if attk.off_screen(SCREEN_HEIGHT):
+                self.attks.remove(attk)
+            else:
+                for obj in objs:
+                    if attk.collision(obj):
+                        obj.health -= self.damage
+                        if obj.health <= 0:
+                            objs.remove(obj)
+                        self.attks.remove(attk)
 
     def draw(self, win):
-        win.blit(self.img, (self.x, self.y))
+        super().draw(win)
+        self.draw_health_bar(win)
+        
+    
+class Virus(Entity):
+    CD = VIR_BU_CD
+
+    def __init__(self, x, y, speed, variant, health,
+                 damage = VIRUS_DAMAGE):
+        super().__init__(x, y, speed, health, damage)
+        self.variant = variant
+        self.img, self.attk_img = VARIANT_MAP[variant]
+        self.mask = pg.mask.from_surface(self.img)
 
     def move(self):
         self.y += self.speed
-        x_move = random.randrange(-50, 50)
+        x_move = random.choice([-1, 0, 1])
         if x_move > 0 and \
            self.x + self.speed + self.img.get_width() < SCREEN_WIDTH:
             self.x += self.speed
         elif x_move < 0 and self.x - self.speed > 0:
             self.x -= self.speed
-        
+
+    def draw_health_bar(self, win):
+        pg.draw.rect(win, (255, 0, 0), 
+                     (self.x, self.y - HEALTH_BAR_SHIFT,
+                      self.get_width(), HEALTH_BAR_HEIGHT))
+        pg.draw.rect(win, (0, 255, 0), 
+                     (self.x, self.y - HEALTH_BAR_SHIFT,
+                      self.get_width() * (self.health / self.max_health), 
+                      HEALTH_BAR_HEIGHT))
+
+    def draw(self, win):
+        super().draw(win)
+        self.draw_health_bar(win)
+
+
+class Bullet():
+    def __init__(self, x, y, img):
+        self.x = x
+        self.y = y
+        self.img = img
+        self.mask = pg.mask.from_surface(self.img)
+
+    def draw(self, win):
+        win.blit(self.img, (self.x, self.y))
+
+    def move(self, vel):
+        self.y += vel
+    
+    def off_screen(self, height):
+        return self.y > height or self.y < 0
+
+    def collision(self, obj):
+        return collide(obj, self)
+ 
+
+def collide(obj1, obj2):
+    offset_x = int(obj2.x - obj1.x)
+    offset_y = int(obj2.y - obj1.y)
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
+
 def get_random(range):
     min, max = range
     return random.randrange(min, max)
@@ -168,7 +285,7 @@ def game(win):
             lost = True
 
         if lost:
-            if lost_count > FPS * LOST_PAUSE_TIME:
+            if lost_count > FRAME_RATES * LOST_PAUSE_TIME:
                 run = False
             else:
                 continue
@@ -180,7 +297,9 @@ def game(win):
                 virus = Virus(get_random(VIRUS_SPAWN_RANGE_X), 
                               get_random(VIRUS_SPAWN_RANGE_Y), # could use a dynamic method with level
                               get_random(VIRUS_SPEED_RANGE) / VIRUS_SPEED_GAP,
-                              random.choice(list(VARIANT_MAP.keys())))
+                              random.choice(list(VARIANT_MAP.keys())),
+                              VIRUS_INIT_HEALTH * \
+                                  (level % DOUBLE_HEALTH_WAVE + 1))
                 viruses.append(virus)
 
         for event in pg.event.get():
@@ -199,9 +318,24 @@ def game(win):
         if (keys[pg.K_s] or keys[pg.K_DOWN]) and \
             vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
             vac.y += vac.speed
+        if keys[pg.K_SPACE]:
+            vac.shoot()
 
         for virus in viruses:
             virus.move()
+            virus.move_bullet(VIR_BU_VEL, vac)
+
+            if random.randrange(0, VIR_BU_PROB) == 1:
+                virus.shoot()
+
+            if collide(virus, vac):
+                vac.health -= virus.damage
+                viruses.remove(virus)
+            elif virus.y + virus.get_height() > SCREEN_HEIGHT:
+                lives_remaining -= 1
+                viruses.remove(virus) 
+
+        vac.move_bullet(VAC_BU_VEL, viruses)
 
 def main():
     pg.init()
