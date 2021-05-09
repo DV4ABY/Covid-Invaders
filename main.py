@@ -10,12 +10,23 @@ FRAME_RATES = 60
 
 GAME_FONT = "comicsans"
 FONT_SIZE = 40
+LOST_FONT = 50
 FONT_COLOR = (255, 255, 255)
 START_MENU_TEXT_SPACING = 150
+INIT_LIVES = 3
 
 NORMAL_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
 VIRUS_ATTK = pg.image.load(os.path.join("assets", "infect.png"))
+VARIANT_MAP = {
+    "normal": (NORMAL_VIRUS, VIRUS_ATTK)
+}
 VIRUS_INIT_HEALTH = 1
+VIRUS_SPAWN_RANGE_X = (50, SCREEN_WIDTH - 50)
+VIRUS_SPAWN_RANGE_Y = (-1800, -50)
+VIRUS_SPEED_GAP = 1000
+VIRUS_SPEED_RANGE = (1 * VIRUS_SPEED_GAP, 2 * VIRUS_SPEED_GAP)
+INIT_AMT_PER_WAV = 5
+WAV_INCRMT = 5
 
 VAC_SIZE = 40
 VACCINE = pg.transform.scale(pg.image.load(os.path.join("assets",
@@ -53,23 +64,33 @@ class Vaccine(object):
         
 
 class Virus(object):
-    VARIANT_MAP = {
-        "normal": (NORMAL_VIRUS, VIRUS_ATTK)
-    }
 
-    def __init__(self, x, y, variant, img, health = VIRUS_INIT_HEALTH):
+    def __init__(self, x, y, speed, variant, health = VIRUS_INIT_HEALTH):
         self.x = x
         self.y = y
+        self.speed = speed
         self.variant = variant
-        self.img = img
+        self.img, self.infect_img = VARIANT_MAP[variant]
+        self.mask = pg.mask.from_surface(self.img)
         self.health = health
         self.max_health = health
-        self.infect_img = None
         self.infects = []
 
     def draw(self, win):
         win.blit(VACCINE, (self.x, self.y))
+
+    def move(self):
+        self.y += self.speed
+        x_move = get_random((-1, 1))
+        if x_move > 0 and \
+           self.x + self.speed + self.img.get_width()< SCREEN_WIDTH:
+            self.x += self.speed
+        elif x_move < 0 and self.x - self.speed > 0:
+            self.x -= self.speed
         
+def get_random(range):
+    min, max = range
+    return random.randrange(min, max)
 
 def draw_start_menu(win, font):
     win.fill(BG_COLOR) # could add a background image
@@ -95,7 +116,6 @@ def main():
     clock = pg.time.Clock()
     font = pg.font.SysFont(GAME_FONT, FONT_SIZE)
 
-    level = 1
     game = False
     instr = False
     run = True
@@ -118,14 +138,32 @@ def main():
         while instr:
             game = True
 
+        level = 0
+        lives_remaining = INIT_LIVES
         vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
+        viruses = []
+        amount_per_wave = INIT_AMT_PER_WAV
         start_time = time.time()
         while game:
 
+            if len(viruses) == 0:
+                level += 1
+                amount_per_wave += WAV_INCRMT
+                for i in range(amount_per_wave):
+                    virus = Virus(get_random(VIRUS_SPAWN_RANGE_X), 
+                                  get_random(VIRUS_SPAWN_RANGE_Y), # could use a dynamic method with level
+                                  get_random(VIRUS_SPEED_RANGE) /\
+                                       VIRUS_SPEED_GAP,
+                                  random.choice(VARIANT_LIST))
+                    viruses.append(virus)
+
             def draw_game():
                 win.fill((0, 0, 0)) # add game backgrounf later
-                vac.draw(win)
 
+                for virus in viruses:
+                    virus.draw(win)
+
+                vac.draw(win)
                 pg.display.update()
 
             play_time = round(time.time() - start_time)
