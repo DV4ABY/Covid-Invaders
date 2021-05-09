@@ -8,14 +8,21 @@ SCREEN_WIDTH = 600
 BG_COLOR = (0, 0, 0)
 FRAME_RATES = 60
 
+MENU_FONT = "comicsans"
+MENU_SIZE = 40
+START_MENU_TEXT_SPACING = 150
+
 GAME_FONT = "comicsans"
 FONT_SIZE = 40
 FONT_COLOR = (255, 255, 255)
-START_MENU_TEXT_SPACING = 150
+
 LOST_MSG_Y = 400
 LOST_MSG_SPACING = 100
 LOST_PAUSE_TIME = 3
+
 INIT_LIVES = 3
+INIT_AMT_PER_WAV = 5
+WAV_INCRMT = 5
 
 NORMAL_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
 VIRUS_ATTK = pg.image.load(os.path.join("assets", "infect.png"))
@@ -27,8 +34,6 @@ VIRUS_SPAWN_RANGE_X = (50, SCREEN_WIDTH - 50)
 VIRUS_SPAWN_RANGE_Y = (-1800, -50)
 VIRUS_SPEED_GAP = 1000
 VIRUS_SPEED_RANGE = (1 * VIRUS_SPEED_GAP, 2 * VIRUS_SPEED_GAP)
-INIT_AMT_PER_WAV = 5
-WAV_INCRMT = 5
 
 VAC_SIZE = 40
 VACCINE = pg.transform.scale(pg.image.load(os.path.join("assets",
@@ -135,88 +140,88 @@ def draw_game(win, font, viruses, vac, lost):
 
     pg.display.update()
 
-def main():
-    pg.init()
-    win = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pg.display.set_caption("") # 想一个窗口的名字
+def game(win):
     clock = pg.time.Clock()
     font = pg.font.SysFont(GAME_FONT, FONT_SIZE)
+    
+    level = 0
+    lives_remaining = INIT_LIVES
+    amount_per_wave = INIT_AMT_PER_WAV
 
-    game = False
-    instr = False
+    lost = False
+    lost_count = 0
+
+    vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
+    viruses = []
+
+    start_time = time.time()
+
     run = True
     while run:
-        clock.tick(FRAME_RATES)
-        draw_start_menu(win, font)
+        play_time = round(time.time() - start_time)
+
+        if lives_remaining <= 0 or vac.health <= 0:
+            lost = True
+
+        if lost:
+            if lost_count > FPS * LOST_PAUSE_TIME:
+                run = False
+            else:
+                continue
+
+        if len(viruses) == 0:
+            level += 1
+            amount_per_wave += WAV_INCRMT
+            for i in range(amount_per_wave):
+                virus = Virus(get_random(VIRUS_SPAWN_RANGE_X), 
+                                get_random(VIRUS_SPAWN_RANGE_Y), # could use a dynamic method with level
+                                get_random(VIRUS_SPEED_RANGE) /\
+                                    VIRUS_SPEED_GAP,
+                                random.choice(list(VARIANT_MAP.keys())))
+                viruses.append(virus)
+
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+
+        keys = pg.key.get_pressed()
+
+        if (keys[pg.K_a] or keys[pg.K_LEFT]) and vac.x - vac.speed >= 0:
+            vac.x -= vac.speed
+        if (keys[pg.K_d] or keys[pg.K_RIGHT]) and \
+            vac.x + vac.speed + vac.get_width() <= SCREEN_WIDTH:
+            vac.x += vac.speed
+        if (keys[pg.K_w] or keys[pg.K_UP]) and vac.y - vac.speed >= 0:
+            vac.y -= vac.speed
+        if (keys[pg.K_s] or keys[pg.K_DOWN]) and \
+            vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
+            vac.y += vac.speed
+
+        draw_game(win, font, viruses, vac, lost)
+
+def main():
+    pg.init()
+
+    win = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pg.display.set_caption("") # 想一个窗口的名字
+
+    menu_font = pg.font.SysFont(MENU_FONT, MENU_SIZE)
+
+    run = True
+    while run:
+        draw_start_menu(win, menu_font)
 
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 run = False
-
-        keys = pg.key.get_pressed()
-
-        if keys[pg.K_F1]:
-            instr = True
-
-        if keys[pg.K_RETURN]:
-            game = True
-
-        while instr:
-            game = True
-
-        level = 0
-        lives_remaining = INIT_LIVES
-        lost = False
-        lost_count = 0
-        vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
-        viruses = []
-        amount_per_wave = INIT_AMT_PER_WAV
-        start_time = time.time()
-        while game:
-
-            if lives_remaining <= 0 or vac.health <= 0:
-                lost = True
-
-            if lost:
-                if lost_count > FPS * LOST_PAUSE_TIME:
-                    run = False
-                else:
-                    continue
-
-            if len(viruses) == 0:
-                level += 1
-                amount_per_wave += WAV_INCRMT
-                for i in range(amount_per_wave):
-                    virus = Virus(get_random(VIRUS_SPAWN_RANGE_X), 
-                                  get_random(VIRUS_SPAWN_RANGE_Y), # could use a dynamic method with level
-                                  get_random(VIRUS_SPEED_RANGE) /\
-                                       VIRUS_SPEED_GAP,
-                                  random.choice(VARIANT_LIST))
-                    viruses.append(virus)
-
-            play_time = round(time.time() - start_time)
-
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    game = False
-                    run = False
-
-            keys = pg.key.get_pressed()
-
-            if (keys[pg.K_a] or keys[pg.K_LEFT]) and vac.x - vac.speed >= 0:
-                vac.x -= vac.speed
-            if (keys[pg.K_d] or keys[pg.K_RIGHT]) and \
-                vac.x + vac.speed + vac.get_width() <= SCREEN_WIDTH:
-                vac.x += vac.speed
-            if (keys[pg.K_w] or keys[pg.K_UP]) and vac.y - vac.speed >= 0:
-                vac.y -= vac.speed
-            if (keys[pg.K_s] or keys[pg.K_DOWN]) and \
-                vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
-                vac.y += vac.speed
-
-            draw_game(win, font, viruses, vac, lost)
-
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_RETURN:
+                    game(win)
+                if event.key == pg.K_F1:
+                    pass
+    
     pg.quit()
+
 
 if __name__ == '__main__':
     main()
