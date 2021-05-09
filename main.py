@@ -67,6 +67,42 @@ VAC_INIT_HEALTH = 100
 HEALTH_BAR_SHIFT = 10
 HEALTH_BAR_HEIGHT = 5
 
+PROP_DROP_PROB = 1
+CAPSULE = pg.image.load(os.path.join("assets", "capsule.png"))
+CAP_HP_REC = 10
+SHIELD = pg.image.load(os.path.join("assets", "shield.png"))
+
+PROP_MAP = {
+    'medicine': CAPSULE,
+    'shield': SHIELD
+}
+
+PROP_TIME = 10 * FRAME_RATES
+SHIELD_TIME = 5 * FRAME_RATES
+
+class Prop(object):
+
+    def __init__(self, x, y, kind):
+        self.x = x
+        self.y = y
+        self.kind = kind
+        self.img = PROP_MAP[kind]
+        self.mask = pg.mask.from_surface(self.img)
+        self.prop_clock = PROP_TIME
+        self.shield_clock = SHIELD_TIME
+
+
+    def draw(self, win):
+        win.blit(self.img, (self.x, self.y))
+        self.prop_clock -= 1
+
+    def effect(obj):
+        if self.kind == "medicine":
+            obj.health += CAP_HP_REC
+        else: pass  #若道具为shield需要在掉血位置加一条判断，if 碰撞 and shield_clock:
+                                                        #则只要碰撞效果，不掉血，未找到这部分代码所以未添加
+
+
 class Entity(object):
     CD = FRAME_RATES // 2
     
@@ -138,7 +174,7 @@ class Vaccine(Entity):
         self.attk_img = VAC_ATTK
         self.mask = pg.mask.from_surface(self.img)
 
-    def move_bullet(self, vel, objs):
+    def move_bullet(self, vel, objs, props):
         self.cooldown()
         for attk in self.attks:
             attk.move(vel)
@@ -149,6 +185,9 @@ class Vaccine(Entity):
                     if attk.collision(obj):
                         obj.health -= self.damage
                         if obj.health <= 0:
+                            prop = get_prop(obj.x, obj.y)
+                            if prop:
+                                props.append(prop)
                             objs.remove(obj)
                         self.attks.remove(attk)
 
@@ -219,6 +258,10 @@ def get_random(range):
     min, max = range
     return random.randrange(min, max)
 
+def get_prop(x, y):
+    #if random.randrange(0, PROP_DROP_PROB) == 1:
+    return Prop(x, y, random.choice(list(PROP_MAP.keys())))
+
 def draw_start_menu(win, font):
     win.fill(BG_COLOR) # could add a background image
     
@@ -279,6 +322,7 @@ def game(win):
 
     vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
     viruses = []
+    props = []
 
     #start_time = time.time()
 
@@ -302,6 +346,14 @@ def game(win):
                        event.type == pg.MOUSEBUTTONDOWN:
                         return
                 continue
+
+        for prop in props:
+            if prop.prop_clock > 0:
+                prop.draw(win)
+                if collide(vac, prop):
+                    props.remove(prop)
+            else:
+                props.remove(prop)
 
         if len(viruses) == 0:
             level += 1
@@ -349,7 +401,8 @@ def game(win):
                 lives_remaining -= 1
                 viruses.remove(virus) 
 
-        vac.move_bullet(VAC_BU_VEL, viruses)
+
+        vac.move_bullet(VAC_BU_VEL, viruses, props)
 
 def main():
     pg.init()
