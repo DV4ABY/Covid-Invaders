@@ -13,9 +13,9 @@ FONT_SIZE = 40
 FONT_COLOR = (255, 255, 255)
 START_MENU_TEXT_SPACING = 150
 
-RED_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
+NORMAL_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
 VIRUS_ATTK = pg.image.load(os.path.join("assets", "infect.png"))
-INIT_VIRUS_HEALTH = 1
+VIRUS_INIT_HEALTH = 1
 
 VAC_SIZE = 40
 VACCINE = pg.transform.scale(pg.image.load(os.path.join("assets",
@@ -23,33 +23,52 @@ VACCINE = pg.transform.scale(pg.image.load(os.path.join("assets",
 VAC_ATTK = pg.image.load(os.path.join("assets", "medicine.png"))
 VAC_INIT_Y = 900
 VAC_INIT_SPEED = 1
+VAC_INIT_HEALTH = 100
 
 class Vaccine(object):
 
-    def __init__(self, x, y, speed = VAC_INIT_SPEED, effect = 1, 
-                 damage = INIT_VIRUS_HEALTH):
+    def __init__(self, x, y, speed = VAC_INIT_SPEED, effect = 1,
+                 health = VAC_INIT_HEALTH, damage = VIRUS_INIT_HEALTH):
         self.x = x
         self.y = y
         self.speed = speed
         self.effect = effect
+        self.health = health
+        self.max_health = health
         self.damage = damage
+        self.img = VACCINE
         self.med_img = VAC_ATTK
-        self.med = None
+        self.med = []
         self.cd = 0
+        self.mask = pg.mask.from_surface(VACCINE)
 
     def draw(self, win):
         win.blit(VACCINE, (self.x, self.y))
+
+    def get_width(self):
+        return self.img.get_width()
+
+    def get_height(self):
+        return self.img.get_height()
         
 
 class Virus(object):
+    VARIANT_MAP = {
+        "normal": (NORMAL_VIRUS, VIRUS_ATTK)
+    }
 
-    def __init__(self, x, y, variant, health = INIT_VIRUS_HEALTH):
+    def __init__(self, x, y, variant, img, health = VIRUS_INIT_HEALTH):
         self.x = x
         self.y = y
         self.variant = variant
+        self.img = img
         self.health = health
+        self.max_health = health
         self.infect_img = None
         self.infects = []
+
+    def draw(self, win):
+        win.blit(VACCINE, (self.x, self.y))
         
 
 def draw_start_menu(win, font):
@@ -99,7 +118,7 @@ def main():
         while instr:
             game = True
 
-        vac = Vaccine(200, VAC_INIT_Y) # need to get img width to place in middle
+        vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
         start_time = time.time()
         while game:
 
@@ -121,12 +140,12 @@ def main():
             if (keys[pg.K_a] or keys[pg.K_LEFT]) and vac.x - vac.speed >= 0:
                 vac.x -= vac.speed
             if (keys[pg.K_d] or keys[pg.K_RIGHT]) and \
-                vac.x + vac.speed + VAC_SIZE <= SCREEN_WIDTH:
+                vac.x + vac.speed + vac.get_width() <= SCREEN_WIDTH:
                 vac.x += vac.speed
             if (keys[pg.K_w] or keys[pg.K_UP]) and vac.y - vac.speed >= 0:
                 vac.y -= vac.speed
             if (keys[pg.K_s] or keys[pg.K_DOWN]) and \
-                vac.y + vac.speed + VAC_SIZE <= SCREEN_HEIGHT:
+                vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
                 vac.y += vac.speed
 
             draw_game()
