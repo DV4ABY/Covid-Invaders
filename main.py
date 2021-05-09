@@ -24,7 +24,10 @@ INIT_LIVES = 3
 INIT_AMT_PER_WAV = 5
 WAV_INCRMT = 5
 
-NORMAL_VIRUS = pg.image.load(os.path.join("assets", "red virus.jpg"))
+NRML_SIZE = 40
+NORMAL_VIRUS = pg.transform.scale(pg.image.load(os.path.join("assets", 
+                                                             "red virus.jpg")),
+                                  (NRML_SIZE, NRML_SIZE))
 VIRUS_ATTK = pg.image.load(os.path.join("assets", "infect.png"))
 VARIANT_MAP = {
     "normal": (NORMAL_VIRUS, VIRUS_ATTK)
@@ -32,8 +35,8 @@ VARIANT_MAP = {
 VIRUS_INIT_HEALTH = 1
 VIRUS_SPAWN_RANGE_X = (50, SCREEN_WIDTH - 50)
 VIRUS_SPAWN_RANGE_Y = (-1800, -50)
-VIRUS_SPEED_GAP = 1000
-VIRUS_SPEED_RANGE = (1 * VIRUS_SPEED_GAP, 2 * VIRUS_SPEED_GAP)
+VIRUS_SPEED_GAP = 50
+VIRUS_SPEED_RANGE = (10, 30)
 
 VAC_SIZE = 40
 VACCINE = pg.transform.scale(pg.image.load(os.path.join("assets",
@@ -84,13 +87,13 @@ class Virus(object):
         self.infects = []
 
     def draw(self, win):
-        win.blit(VACCINE, (self.x, self.y))
+        win.blit(self.img, (self.x, self.y))
 
     def move(self):
         self.y += self.speed
         x_move = get_random((-1, 1))
         if x_move > 0 and \
-           self.x + self.speed + self.img.get_width()< SCREEN_WIDTH:
+           self.x + self.speed + self.img.get_width() < SCREEN_WIDTH:
             self.x += self.speed
         elif x_move < 0 and self.x - self.speed > 0:
             self.x -= self.speed
@@ -154,11 +157,13 @@ def game(win):
     vac = Vaccine(SCREEN_WIDTH / 2 - VACCINE.get_width() / 2, VAC_INIT_Y)
     viruses = []
 
-    start_time = time.time()
+    #start_time = time.time()
 
     run = True
     while run:
-        play_time = round(time.time() - start_time)
+        #play_time = round(time.time() - start_time)
+
+        draw_game(win, font, viruses, vac, lost)
 
         if lives_remaining <= 0 or vac.health <= 0:
             lost = True
@@ -174,10 +179,9 @@ def game(win):
             amount_per_wave += WAV_INCRMT
             for i in range(amount_per_wave):
                 virus = Virus(get_random(VIRUS_SPAWN_RANGE_X), 
-                                get_random(VIRUS_SPAWN_RANGE_Y), # could use a dynamic method with level
-                                get_random(VIRUS_SPEED_RANGE) /\
-                                    VIRUS_SPEED_GAP,
-                                random.choice(list(VARIANT_MAP.keys())))
+                              get_random(VIRUS_SPAWN_RANGE_Y), # could use a dynamic method with level
+                              get_random(VIRUS_SPEED_RANGE) / VIRUS_SPEED_GAP,
+                              random.choice(list(VARIANT_MAP.keys())))
                 viruses.append(virus)
 
         for event in pg.event.get():
@@ -197,7 +201,8 @@ def game(win):
             vac.y + vac.speed + vac.get_height() <= SCREEN_HEIGHT:
             vac.y += vac.speed
 
-        draw_game(win, font, viruses, vac, lost)
+        for virus in viruses:
+            virus.move()
 
 def main():
     pg.init()
