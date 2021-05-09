@@ -67,18 +67,23 @@ VAC_INIT_HEALTH = 100
 HEALTH_BAR_SHIFT = 10
 HEALTH_BAR_HEIGHT = 5
 
+PROP_SIZE = 35
 PROP_DROP_PROB = 1
-CAPSULE = pg.image.load(os.path.join("assets", "capsule.png"))
+CAPSULE = pg.transform.scale(pg.image.load(os.path.join("assets", 
+                                                        "capsule.png")),
+                             (PROP_SIZE, PROP_SIZE))
 CAP_HP_REC = 10
-SHIELD = pg.image.load(os.path.join("assets", "shield.png"))
+SHIELD = pg.transform.scale(pg.image.load(os.path.join("assets", 
+                                                        "shield.png")),
+                            (PROP_SIZE, PROP_SIZE))
 
 PROP_MAP = {
     'medicine': CAPSULE,
     'shield': SHIELD
 }
 
-PROP_TIME = 10 * FRAME_RATES
-SHIELD_TIME = 5 * FRAME_RATES
+PROP_TIME = 40 * FRAME_RATES
+SHIELD_TIME = 20 * FRAME_RATES
 
 class Prop(object):
 
@@ -96,9 +101,10 @@ class Prop(object):
         win.blit(self.img, (self.x, self.y))
         self.prop_clock -= 1
 
-    def effect(obj):
+    def effect(self, obj):
         if self.kind == "medicine":
-            obj.health += CAP_HP_REC
+            if obj.health + CAP_HP_REC <= obj.max_health:
+                obj.health += CAP_HP_REC
         else: pass  #若道具为shield需要在掉血位置加一条判断，if 碰撞 and shield_clock:
                                                         #则只要碰撞效果，不掉血，未找到这部分代码所以未添加
 
@@ -290,7 +296,7 @@ def draw_lost(win, font):
     win.blit(lost_msg, (SCREEN_WIDTH / 2 - lost_msg.get_width() / 2,
                         LOST_MSG_Y + LOST_MSG_SPACING * 2))
 
-def draw_game(win, font, viruses, vac, lost, lives, level):
+def draw_game(win, font, viruses, vac, lost, lives, level, props):
     win.fill((0, 0, 0)) # add game backgrounf later
 
     lives_label = font.render(f"Lives: {lives}", 1, FONT_COLOR)
@@ -306,6 +312,9 @@ def draw_game(win, font, viruses, vac, lost, lives, level):
 
     if lost:
         draw_lost(win, font)
+
+    for prop in props:
+        prop.draw(win)
 
     pg.display.update()
 
@@ -330,7 +339,7 @@ def game(win):
     while run:
         #play_time = round(time.time() - start_time)
 
-        draw_game(win, font, viruses, vac, lost, lives_remaining, level)
+        draw_game(win, font, viruses, vac, lost, lives_remaining, level, props)
 
         if lives_remaining <= 0 or vac.health <= 0:
             lost = True
@@ -346,14 +355,6 @@ def game(win):
                        event.type == pg.MOUSEBUTTONDOWN:
                         return
                 continue
-
-        for prop in props:
-            if prop.prop_clock > 0:
-                prop.draw(win)
-                if collide(vac, prop):
-                    props.remove(prop)
-            else:
-                props.remove(prop)
 
         if len(viruses) == 0:
             level += 1
@@ -401,6 +402,13 @@ def game(win):
                 lives_remaining -= 1
                 viruses.remove(virus) 
 
+        for prop in props:
+            if prop.prop_clock > 0:
+                if collide(vac, prop):
+                    prop.effect(vac)
+                    props.remove(prop)
+            else:
+                props.remove(prop)
 
         vac.move_bullet(VAC_BU_VEL, viruses, props)
 
