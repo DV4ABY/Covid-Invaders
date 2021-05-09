@@ -13,28 +13,27 @@ FONT_SIZE = 40
 FONT_COLOR = (255, 255, 255)
 START_MENU_TEXT_SPACING = 150
 
-INIT_HEALTH = 100
-INIT_AMMO = 100
+RED_VIRUS = pygame.image.load(os.path.join("assets", "red virus.jpg"))
 
-class Player(object):
+VACCINE = pygame.image.load(os.path.join("assets", "vaccine.png"))
 
-    def __init__(self, x, y, health, ammo):
+class Vaccine(object):
+
+    def __init__(self, x, y, effect, damage):
         self.x = x
         self.y = y
-        self.health = health
-        self.ammo = ammo
+        
 
-class Enemy(object):
+class Virus(object):
 
-    def __init__(self, x, y, health):
+    def __init__(self, x, y, variant):
         self.x = x
         self.y = y
-        self.health = health
+        
 
-def draw_start_menu(win):
-    win.fill(BG_COLOR)
-    font = pygame.font.SysFont(GAME_FONT, FONT_SIZE)
-
+def draw_start_menu(win, font):
+    win.fill(BG_COLOR) # could add a background image
+    
     name = font.render("Game Name", 1, FONT_COLOR)
     win.blit(name, (SCREEN_WIDTH / 2 - name.get_width() / 2, 
                     START_MENU_TEXT_SPACING))
@@ -54,14 +53,16 @@ def main():
     win = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("") # 想一个窗口的名字
     clock = pygame.time.Clock()
+    font = pygame.font.SysFont(GAME_FONT, FONT_SIZE)
 
     start_time = time.time()
+    level
     game = False
     instr = False
     run = True
     while run:
         clock.tick(FRAME_RATES)
-        draw_start_menu(win)
+        draw_start_menu(win, font)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
